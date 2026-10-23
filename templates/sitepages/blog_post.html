@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block meta_description %}{{ meta_description }}{% endblock %}
+{% block meta_extra %}
+{% if meta_keywords %}<meta name="keywords" content="{{ meta_keywords }}">{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <article class="article">
+    <a href="{% url 'blog' %}" class="back-link">← Back to Latest Posts</a>
+    <h1>
+      {{ post.title }}
+      {% if post.episode %}<span class="episode-tag">{{ post.episode }}</span>{% endif %}
+    </h1>
+    <p class="article-meta">Published on {{ post.date_display }}</p>
+
+    <div class="article-hero">
+      <img src="{% static 'images/' %}{{ post.image }}" alt="{{ post.title }}">
+    </div>
+
+    <div class="prose">
+      {{ post.content_html|safe }}
+    </div>
+
+    <section class="cta-center cta-border">
+      <h2>Stay in the loop</h2>
+      <a href="{% url 'contact' %}" class="btn-join-pill">Join Us</a>
+    </section>
+  </article>
+
+  {% include "partials/footer.html" %}
+</div>
+{% endblock %}

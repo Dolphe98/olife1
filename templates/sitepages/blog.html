@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}The Olife Chronicles — Blog{% endblock %}
+{% block meta_description %}An infinite number of unresolved questions—here, we dive deeper into all of them.{% endblock %}
+
+{% block content %}
+<div class="container stack-md">
+  <header class="page-hero left">
+    <h1>
+      An infinite number of unresolved questions, unsatisfying answers, incomplete facts, and incomplete laws—
+      <span class="accent">here, we dive deeper into all of them.</span>
+    </h1>
+    <p class="eyebrow">The Olife Chronicles</p>
+  </header>
+
+  <section class="grid-3">
+    {% for post in posts %}
+    <a href="{% url 'blog_post' post.pk %}" class="post-card">
+      <div class="thumb" style="height:16rem">
+        <img src="{% static 'images/' %}{{ post.image }}" alt="{{ post.title }}">
+      </div>
+      <h3 style="font-size:1.25rem">{{ post.title }}</h3>
+      <span class="post-date">{{ post.date_display }}</span>
+    </a>
+    {% empty %}
+    <p>No articles yet.</p>
+    {% endfor %}
+  </section>
+
+  <section class="cta-center cta-border">
+    <h2>Ready to join the brave ones?</h2>
+    <a href="{% url 'contact' %}" class="btn-join-pill">Join Us</a>
+  </section>
+
+  {% include "partials/footer.html" %}
+</div>
+{% endblock %}

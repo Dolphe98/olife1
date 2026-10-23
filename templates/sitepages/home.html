@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Olife — Sanctuary for the Brave{% endblock %}
+
+{% block content %}
+<div class="container stack">
+  <section class="hero-split">
+    <div class="hero-copy">
+      <h1>Are you brave enough to see what the uncertainty and the unknown hold for us?</h1>
+      <p class="hero-tagline">This path is not for everybody; it is reserved for the brave ones only.</p>
+      <a href="{% url 'contact' %}" class="btn-join btn-join-lg">Join Us</a>
+    </div>
+    <div class="hero-images">
+      <img src="{% static 'images/olife1.comsection1image1.jpg' %}" alt="Olife Background" class="hero-img-back">
+      <img src="{% static 'images/olife1.comsection1image2.jpg' %}" alt="Olife Foreground" class="hero-img-front">
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title-row">
+      <a href="{% url 'fragments' %}" class="section-title">Latest Fragments <span class="arrow">→</span></a>
+    </div>
+    <div class="grid-3">
+      {% for fragment in latest_fragments %}
+      <a href="{% url 'fragments' %}" class="fragment-card">
+        <img src="{% static 'images/' %}{{ fragment.image }}" alt="{{ fragment.alt_text }}">
+      </a>
+      {% empty %}
+      <p>No fragments yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="sanctuary">
+    <div class="sanctuary-photo">
+      <img src="{% static 'images/D.Rodolphe2026good.png' %}" alt="Deroselin Rodolphe">
+    </div>
+    <div class="sanctuary-copy">
+      <h2>I am <span>Deroselin Rodolphe</span></h2>
+      <p>We bring you this sanctuary, <strong>Olife</strong>: a space where your imagination is welcomed and valued.</p>
+      <a href="{% url 'about' %}" class="link-more">Read More <span>→</span></a>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title-row">
+      <a href="{% url 'blog' %}" class="section-title">Latest Articles <span class="arrow">→</span></a>
+    </div>
+    <div class="grid-3">
+      {% for post in latest_posts %}
+      <a href="{% url 'blog_post' post.pk %}" class="post-card">
+        <div class="thumb">
+          <img src="{% static 'images/' %}{{ post.image }}" alt="{{ post.title }}">
+        </div>
+        <h3>{{ post.title }}</h3>
+        <span class="post-date">{{ post.date_display }}</span>
+      </a>
+      {% empty %}
+      <p>No articles yet.</p>
+      {% endfor %}
+    </div>
+    <div class="cta-center">
+      <a href="{% url 'contact' %}" class="btn-join-pill">Join Us</a>
+    </div>
+  </section>
+
+  {% include "partials/footer.html" %}
+</div>
+{% endblock %}

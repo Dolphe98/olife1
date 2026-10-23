@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Data Privacy — Olife{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="legal">
+    <h1>Data Privacy</h1>
+    <p>
+      Olife collects contact information you voluntarily submit through our forms (such as name, email,
+      WhatsApp number, and message content) so we can respond to you and share community updates you request.
+    </p>
+    <p>
+      We do not sell your personal information. Form submissions may be processed by Formspree and protected by Google reCAPTCHA.
+      Please review those services’ privacy policies for details on how they handle data.
+    </p>
+    <p>
+      If you want your information removed from our records, contact us through the
+      <a href="{% url 'contact' %}" style="color:#06b6d4">Contact</a> page.
+    </p>
+  </div>
+  {% include "partials/footer.html" %}
+</div>
+{% endblock %}

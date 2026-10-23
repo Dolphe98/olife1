@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}The Vision — About Olife{% endblock %}
+{% block meta_description %}Beneath the surface of Olife — the vision of Deroselin Rodolphe.{% endblock %}
+
+{% block content %}
+<div class="container stack-md">
+  <header class="page-hero">
+    <h1>The Vision</h1>
+    <p class="eyebrow">Beneath the surface of Olife</p>
+  </header>
+
+  <section class="about-block">
+    <div class="about-media">
+      <img src="{% static 'images/D.Rodolphe2026good.png' %}" alt="Deroselin Rodolphe" class="gray">
+    </div>
+    <div class="about-copy">
+      <h2>I am Deroselin Rodolphe</h2>
+      <p>
+        We bring you this sanctuary, <span class="bright">Olife</span>: a space where your imagination is welcomed and valued.
+        Here, we let our imagination guide us without judgment. We do not seek final answers; instead, we embrace a state of
+        openness that encourages constant discovery.
+      </p>
+      <p>
+        Olife opens the door to infinity—a limitless space where every thought creates new worlds. Within this sanctuary,
+        we allow the universe to show us what truly lies within it. Through this process, we become
+        <span class="cyan-em">antifragile</span>.
+      </p>
+    </div>
+  </section>
+
+  <section class="about-block reverse">
+    <div class="about-media">
+      <img src="{% static 'images/olifeabout2.jpg' %}" alt="Observing the Universe">
+    </div>
+    <div class="about-copy">
+      <p class="quote">"Olife is not just a way to see the universe; it is a way of observing without labeling."</p>
+      <p>
+        We understand that naming limits us, trapping the infinite within our narrow views. We choose to embrace the universe
+        with open hands rather than gripping tightly to fixed definitions. Olife is an effort to reach for what cannot be
+        expressed in words, but instead reveals itself through experience.
+      </p>
+    </div>
+  </section>
+
+  <section class="about-block">
+    <div class="about-media">
+      <img src="{% static 'images/olifeabout3.jpg' %}" alt="The Open Door">
+    </div>
+    <div class="about-copy">
+      <p>
+        In this space, reality, fiction, and spirituality blend as we dive deeper. We explore, we examine, and we ask questions.
+        More importantly, we learn how to ask questions, digging into the foundations of our own curiosity.
+      </p>
+      <p>
+        We believe in seeking help and learning how to ask for it, recognizing that vulnerability connects us to the rest of
+        the universe. In the sanctuary of Olife, the door is always open. The universe constantly speaks to those who have
+        stopped trying to label it, and eventually, we will live our way into the answers.
+      </p>
+    </div>
+  </section>
+
+  <section class="cta-center cta-border">
+    <h2>Step into the unknown</h2>
+    <a href="{% url 'contact' %}" class="btn-join-pill">Join the Sanctuary</a>
+  </section>
+
+  {% include "partials/footer.html" %}
+</div>
+{% endblock %}

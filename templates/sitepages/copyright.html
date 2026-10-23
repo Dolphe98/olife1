@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Copyright Notice — Olife{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="legal">
+    <h1>Copyright Notice</h1>
+    <p>
+      © 2026 Olife Sanctuary. All rights reserved. All text, images, fragments, and other materials on this
+      website are protected by copyright unless otherwise noted.
+    </p>
+    <p>
+      You may share links to Olife content. You may not copy, redistribute, or republish substantial portions of
+      the site without prior written permission.
+    </p>
+    <p>
+      For permissions or questions, use the <a href="{% url 'contact' %}" style="color:#06b6d4">Contact</a> page.
+    </p>
+  </div>
+  {% include "partials/footer.html" %}
+</div>
+{% endblock %}

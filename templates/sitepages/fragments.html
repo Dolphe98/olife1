@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Fragments — Olife{% endblock %}
+{% block meta_description %}Fragments — an open door to the infinite.{% endblock %}
+
+{% block content %}
+<div class="container stack-md">
+  <header class="page-hero">
+    <h1>Fragments</h1>
+    <p class="eyebrow">An Open Door to the Infinite</p>
+    <div class="rule"></div>
+  </header>
+
+  <section class="frag-grid">
+    {% for fragment in fragments %}
+    <div class="frag-tile">
+      <div class="aspect">
+        <img src="{% static 'images/' %}{{ fragment.image }}" alt="{{ fragment.alt_text }}">
+      </div>
+    </div>
+    {% empty %}
+    <p>No fragments yet.</p>
+    {% endfor %}
+  </section>
+
+  <section class="cta-center cta-border">
+    <h2>Ready to join the brave ones?</h2>
+    <a href="{% url 'contact' %}" class="btn-join-pill">Join Us</a>
+  </section>
+
+  {% include "partials/footer.html" %}
+</div>
+{% endblock %}

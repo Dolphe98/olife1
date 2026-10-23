@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Contact — Join Olife{% endblock %}
+{% block meta_description %}Join the Olife community on WhatsApp, send a message, or subscribe to the newsletter.{% endblock %}
+
+{% block head_extra %}
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="container stack-md">
+  <section class="contact-quote">
+    <h1>“At <span class="brand">Olife</span>, we provide a judgment-free space.”</h1>
+    <div class="rule" style="margin:0 auto"></div>
+  </section>
+
+  <section class="wa-panel">
+    <div class="wa-links">
+      <h2>Join our community on <span class="green">WhatsApp</span></h2>
+      <a
+        href="https://chat.whatsapp.com/H3j7yRTaKIvLFA8xNNjJ2S"
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        aria-label="Join Olife WhatsApp Group"
+        class="wa-link"
+      >
+        <span class="label">WhatsApp Group</span>
+        <span class="badge">Join Group</span>
+      </a>
+      <a
+        href="https://whatsapp.com/channel/0029VbChk337oQhilYhgdA0Z"
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        aria-label="Follow Olife WhatsApp Channel"
+        class="wa-link channel"
+      >
+        <span class="label">WhatsApp Channel</span>
+        <span class="badge">Follow</span>
+      </a>
+    </div>
+    <div class="wa-photo">
+      <img src="{% static 'images/olifecontact1.jpg' %}" alt="Olife Community" width="600" height="400">
+    </div>
+  </section>
+
+  <section class="form-wrap">
+    <div class="form-head">
+      <h3>Send a Message</h3>
+      <p>We value your curiosity</p>
+    </div>
+
+    <form id="contact-form" class="form-grid" novalidate>
+      <div class="field">
+        <label for="first_name">First Name</label>
+        <input id="first_name" type="text" name="First_Name" required placeholder="John">
+      </div>
+      <div class="field">
+        <label for="last_name">Last Name</label>
+        <input id="last_name" type="text" name="Last_Name" required placeholder="Doe">
+      </div>
+      <div class="field">
+        <label for="email">Email Address</label>
+        <input id="email" type="email" name="email" required placeholder="john@example.com">
+      </div>
+      <div class="field">
+        <label for="whatsapp">WhatsApp Number (Optional)</label>
+        <input id="whatsapp" type="tel" name="WhatsApp_Number" placeholder="+509 ...">
+      </div>
+      <div class="field full">
+        <label for="subject">Subject</label>
+        <input id="subject" type="text" name="Subject" required placeholder="Deep Questions">
+      </div>
+      <div class="field full">
+        <label for="message">Message</label>
+        <textarea id="message" name="Message" rows="5" required placeholder="Share your thoughts..."></textarea>
+      </div>
+      <div class="captcha-wrap">
+        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}" data-theme="dark"></div>
+      </div>
+      <button type="submit" class="btn-submit" id="contact-submit">Send Message</button>
+    </form>
+  </section>
+
+  <form id="newsletter-form" class="newsletter">
+    <h2>The Newsletter</h2>
+    <p>Subscribe to receive our latest fragments directly in your inbox.</p>
+    <div class="newsletter-row">
+      <input
+        type="email"
+        name="Newsletter_Email"
+        required
+        aria-label="Email address for newsletter"
+        placeholder="your@email.com"
+      >
+      <button type="submit" id="news-submit">Subscribe</button>
+    </div>
+  </form>
+
+  {% include "partials/footer.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var endpoint = "{{ formspree_endpoint|escapejs }}";
+
+  var contactForm = document.getElementById("contact-form");
+  var contactBtn = document.getElementById("contact-submit");
+  if (contactForm) {
+    contactForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var captcha = typeof grecaptcha !== "undefined" ? grecaptcha.getResponse() : "";
+      if (!captcha) {
+        alert("Please verify that you are a human.");
+        return;
+      }
+      contactBtn.disabled = true;
+      contactBtn.textContent = "Sending...";
+      try {
+        var response = await fetch(endpoint, {
+          method: "POST",
+          body: new FormData(contactForm),
+          headers: { Accept: "application/json" }
+        });
+        if (response.ok) {
+          alert("Message sent successfully!");
+          contactForm.reset();
+          if (typeof grecaptcha !== "undefined") grecaptcha.reset();
+        } else {
+          alert("Could not send. Please try again.");
+        }
+      } catch (err) {
+        alert("Network Error. Please try again.");
+      } finally {
+        contactBtn.disabled = false;
+        contactBtn.textContent = "Send Message";
+      }
+    });
+  }
+
+  var newsForm = document.getElementById("newsletter-form");
+  var newsBtn = document.getElementById("news-submit");
+  if (newsForm) {
+    newsForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      newsBtn.textContent = "...";
+      try {
+        var response = await fetch(endpoint, {
+          method: "POST",
+          body: new FormData(newsForm),
+          headers: { Accept: "application/json" }
+        });
+        if (response.ok) {
+          alert("Thanks for subscribing to Olife!");
+          newsForm.reset();
+        } else {
+          alert("Could not subscribe. Try again later.");
+        }
+      } catch (err) {
+        alert("Could not subscribe. Try again later.");
+      } finally {
+        newsBtn.textContent = "Subscribe";
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}
