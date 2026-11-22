@@ -20,8 +20,10 @@ olife1/
 │   ├── nodes/                    # one module per agent
 │   ├── tools/                    # gh, railway, supabase, seo, ga4 helpers
 │   └── prompts/
-├── chatbot/                      # Phase 5 Google Chat (or fallback console)
-│   ├── app.py
+├── chatbot/                      # Phase 5: Telegram + /admin/commands/ (one router)
+│   ├── router.py                 # shared CommandRouter (plain text)
+│   ├── telegram_adapter.py
+│   ├── web_console_adapter.py
 │   └── commands/
 ├── config/                       # Django project package (exists)
 │   ├── settings.py
@@ -101,8 +103,7 @@ No Next.js/React frontend. Django templates only.
 - Checkpoints: memory/SQLite/Postgres checkpointer for interrupt-before-deploy.
 - LLM: Google **Gemini Flash** default; Pro via env; thin `LLMAdapter` with Anthropic/OpenAI fallback (`config/llm.yaml` + secrets in env).
 
-Control plane (Phase 5): Google Chat commands → chatbot service → enqueue graph run on worker.  
-**Fallback if no Workspace:** Telegram bot **or** staff web command console under `/admin/commands/` (see `AGENTS.md`).
+Control plane (Phase 5): **Telegram** (primary) + staff **`/admin/commands/`** (backup) → shared `CommandRouter` → enqueue graph on worker. Plain text only — no Google Chat (personal Gmail / no Workspace). See `AGENTS.md`.
 
 ---
 
@@ -117,7 +118,7 @@ feature/* ──PR──► staging ──agent smoke──► merge main ──
 1. Feature branch → PR into `staging`.
 2. Merge to `staging` → Railway staging auto-deploy → agent smoke (`/healthz`, critical routes).
 3. PR/merge `staging` → `main` only after smoke green.
-4. Production promote requires human **APPROVE DEPLOY** (Chat or documented channel).
+4. Production promote requires human **APPROVE DEPLOY** (Telegram or `/admin/commands/`).
 5. **ROLLBACK** → previous prod deployment + audit log.
 
 Secrets: Railway variables per environment. Commit only `.env.example`.

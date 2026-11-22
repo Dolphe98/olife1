@@ -78,21 +78,23 @@ No production code until owner replies **`APPROVE BUILD`**.
 
 ---
 
-## Phase 5 — Chat control surface
+## Phase 5 — Command control surface (Telegram + admin console)
 
-**Gate:** Workspace vs personal Gmail confirmed.
+**Locked:** Personal Gmail only — **no Google Chat**. Plain text commands only (no cards/buttons).
 
 **Work**
 
-- If Workspace: Google Chat app + command mapping
-- Else: Telegram and/or `/admin/commands/` fallback
-- Wire APPROVE DEPLOY / ROLLBACK
+- Shared `CommandRouter` with the `/slash` grammar from `AGENTS.md`
+- **Primary transport:** Telegram bot
+- **Backup transport:** staff-only `/admin/commands/` web console (POST same command strings)
+- Wire `APPROVE DEPLOY` / `ROLLBACK` / `/pause` through both transports
 
 **Acceptance**
 
-- [ ] All commands in AGENTS.md respond
-- [ ] Prod deploy impossible without APPROVE DEPLOY
-- [ ] Pause interrupts in-flight graph
+- [ ] Every command in `AGENTS.md` works on Telegram **and** `/admin/commands/`
+- [ ] Prod deploy impossible without `APPROVE DEPLOY`
+- [ ] `/pause` interrupts in-flight graph
+- [ ] No Google Chat code paths or Chat-only UI primitives
 
 ---
 

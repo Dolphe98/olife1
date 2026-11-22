@@ -1,134 +1,156 @@
-# SSL Fix — olife1.com
+# SSL Fix — olife1.com (Option A: Hostinger DNS)
 
-**Priority:** P0. Browser shows **Not secure** with `https` struck through on `https://olife1.com`.
+**Priority:** P0 for the green lock. **Does not block Phase 2** — do DNS in parallel.  
+**Strategy:** Keep current nameservers (`ns1.dns-parking.com` / `ns2.dns-parking.com`). Add Railway records manually in Hostinger. **Do not** move nameservers to Railway.
 
-**Date audited:** 2026-11-21  
-**Production service:** Railway project hosting the Django `olife1` repo (service `web`).  
-**IDs omitted from this doc by policy** — use Railway dashboard / local `.env`, not committed docs.
+**Audited:** 2026-11-21 (WHOIS confirmed parking NS). Records re-checked via Railway Domains API.
 
 ---
 
-## 1. Exact certificate error observed
+## 1. Exact records Railway shows (web → Domains)
 
-| Check | Result |
+Source: Railway custom-domain status for production service `web`.  
+If the Railway UI shows different targets when you open it, **the UI wins** — paste those instead.
+
+### Apex — `olife1.com`
+
+| Field | Value |
 |-------|--------|
-| Browser (owner screenshot) | Red **Not secure**; `https` struck through on `https://olife1.com` |
-| Python TLS verify | `SSLCertVerificationError: Hostname mismatch, certificate is not valid for 'olife1.com'` |
-| Presented cert subject (via local inspection) | `CN=*.up.railway.app` (SAN: `*.up.railway.app`, `up.railway.app`) |
-| Railway domain status — **apex** `olife1.com` | Verified: yes · Certificate: **`CERTIFICATE_STATUS_TYPE_ISSUING`** |
-| Railway domain status — **www** `www.olife1.com` | Verified: yes · Certificate: **`CERTIFICATE_STATUS_TYPE_VALID`** |
+| Status | Verified: **yes** · Certificate: **`ISSUING`** (broken lock cause) |
+| Record type | **CNAME** (not A) |
+| Host / name | `olife1.com` (Hostinger: `@`) |
+| Points to / target | **`6uu49l2o.up.railway.app`** |
+| DNS match | **currently unset** ← fix this |
+| TXT | None returned by status API for this domain (already verified). If Railway UI shows a `_railway` / ownership **TXT**, add it exactly as shown. |
+| A / AAAA | **Not required by Railway** — do not invent a static A record |
 
-**Interpretation:** Traffic reaches the Django app (HTTP 200, same HTML as the Railway `*.up.railway.app` service domain), but the **custom apex certificate has never finished issuing**. TLS is falling back to the shared `*.up.railway.app` cert → browsers correctly flag a hostname mismatch → “Not secure.”
+### www — `www.olife1.com`
 
-> Note: Local antivirus TLS inspection (e.g. Avast) may re-sign certificates on the owner machine. The Railway dashboard status (`ISSUING` + unset apex CNAME) is the authoritative cause; browser “Not secure” is the user-visible symptom.
+| Field | Value |
+|-------|--------|
+| Status | Verified: **yes** · Certificate: **`VALID`** |
+| Record type | **CNAME** |
+| Host / name | `www` |
+| Points to / target | **`jghbrc1s.up.railway.app`** |
+| DNS match | Propagated (present) |
+| TXT | None in status API; add only if UI shows one |
 
----
-
-## 2. DNS reality vs assumption
-
-Owner believed DNS was “fully on Railway nameservers.” Live lookup on 2026-11-21 showed:
-
-| Record | Observed |
-|--------|----------|
-| Apex NS | `ns1.dns-parking.com`, `ns2.dns-parking.com` (**Hostinger parking DNS** — not Railway) |
-| Apex A | `olife1.com` → `153.52.255.98` |
-| www CNAME | `www.olife1.com` → `jghbrc1s.up.railway.app` (**propagated**) |
-| Railway-required apex CNAME | `olife1.com` → `6uu49l2o.up.railway.app` · status: **PROPAGATED / currently unset** |
-
-**Root cause chain:**
-
-1. Apex does **not** point at the Railway target Railway expects for certificate issuance.
-2. Railway cannot complete Let’s Encrypt (or equivalent) issuance for `olife1.com` → status stays **ISSUING**.
-3. Edge serves `*.up.railway.app` cert for HTTPS to the apex hostname → **hostname mismatch**.
-4. `www` has a valid Railway cert, but canonical is apex — users hitting apex see the warning. Also www currently points at an older Railway hostname (`jghbrc1s…`) that may differ from the apex target Railway now shows (`6uu49l2o…`); align both to the targets shown in the Railway Domains UI **today**.
-
-This is **not** primarily an HSTS or mixed-content bug. Mixed content was not observed as the cause of the lock icon failure. HSTS is not configured in Django settings yet.
+> Railway does **not** ask for an apex **A** record. Targets are hostnames under `*.up.railway.app` (dynamic). A static Hostinger/parking IP will break SSL again when upstream IPs change.
 
 ---
 
-## 3. Likely causes (ranked)
+## 2. Why the browser shows “Not secure”
 
-1. **Apex DNS CNAME/ALIAS missing or wrong** (confirmed by Railway: required CNAME unset) — primary.
-2. **Nameservers still on Hostinger parking DNS** — explains why Railway-managed DNS assumption is false; records must be edited at the registrar that controls those NS, **or** NS must be moved to Railway Domains (only if the domain is in Railway Domains with Railway nameservers).
-3. **www CNAME target drift** — valid cert today, but target hostname may be stale vs Railway’s current required target.
-4. **Certificate stuck in ISSUING** — consequence of (1); after DNS fix, use Railway “retry certificate issuance.”
-5. **Apex vs www inconsistency** — no 301 www→apex yet (to be added in app after SSL is healthy).
-6. **HSTS / mixed content** — secondary; address only after green lock.
+1. Apex CNAME to `6uu49l2o.up.railway.app` is **unset**.
+2. Certificate for apex stays **ISSUING**.
+3. HTTPS presents `*.up.railway.app` → hostname mismatch → Chrome strikes through `https`.
 
----
-
-## 4. Concrete fix steps (owner clicks + DNS)
-
-### Preflight (read-only)
-
-1. Open Railway → project that serves olife1 → service **web** → **Settings → Networking / Domains**.
-2. Confirm both `olife1.com` and `www.olife1.com` are listed.
-3. Copy the **exact** required DNS records Railway shows for each (do not use the hostnames in this doc if the UI differs — UI wins).
-
-### Path A — Recommended if domain stays at current registrar (parking NS)
-
-You keep nameservers at the current DNS host and create records there.
-
-**You click / edit:**
-
-1. Log into the account that controls `ns1/ns2.dns-parking.com` for `olife1.com` (typically Hostinger / the domain registrar).
-2. For **apex** `olife1.com`, add exactly what Railway shows. Common patterns:
-   - **CNAME flattening / ALIAS / ANAME** to the Railway target (preferred for apex), **or**
-   - Railway-documented **CNAME** on apex if your DNS host supports apex CNAME flattening.
-   - Do **not** leave the apex on the parking A record `153.52.255.98`.
-3. For **www**, set **CNAME** to the Railway target shown for `www.olife1.com` (replace `jghbrc1s.up.railway.app` if Railway now shows a different target).
-4. Remove conflicting A/AAAA/CNAME records for apex/www.
-5. Wait for DNS propagation (often 5–60 minutes; up to 48h at stubborn resolvers).
-6. In Railway Domains UI, confirm apex required record flips from **unset** to **matched**.
-7. If certificate remains **ISSUING** after DNS matches: click **Retry certificate issuance** (Railway dashboard or `railway domain` CLI retry). Docs: Railway SSL troubleshooting / domain certificate retry.
-8. Verify in an **incognito** window (or phone cellular): `https://olife1.com` shows a closed lock; cert CN/SAN includes `olife1.com`.
-
-### Path B — Railway-managed DNS (only if domain is under Railway Domains)
-
-Railway fully manages DNS for domains purchased/hosted through Railway Domains (`railway.com/workspace/domains`). If `olife1.com` is **not** listed there, Path A applies.
-
-**You click:**
-
-1. Open **Workspace → Domains** in Railway.
-2. If the domain is present and NS are custom/parking: either **Reset to Railway** nameservers (per Railway Domains docs) **or** stay on Path A.
-3. If switching NS: at the registrar, set nameservers to the values Railway displays → wait for NS propagation → confirm Railway DNS records for the web service are present → retry certificate if needed.
-
-### After green lock (agent will implement after APPROVE BUILD — listed here for sequencing)
-
-9. Enforce canonical host: **www → apex 301** (`https://www.olife1.com/*` → `https://olife1.com/*`).
-10. Set Django `SECURE_SSL_REDIRECT`, HSTS (start with short `max-age`, then raise), `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` for apex + staging.
-11. Add `staging.olife1.com` as a custom domain on the **staging** Railway environment/service; CNAME to staging Railway target; obtain cert before smoke tests.
+`www` already has a valid cert; canonical remains apex once fixed.
 
 ---
 
-## 5. Owner checklist (copy/paste)
+## 3. Hostinger steps (Option A)
 
-1. [ ] Open Railway → web service → Domains → copy required records for `olife1.com` and `www.olife1.com`.
-2. [ ] Open DNS host for parking nameservers (or Railway Domains if applicable).
-3. [ ] Fix **apex** to Railway target; delete parking A record.
-4. [ ] Align **www** CNAME to Railway’s current www target.
-5. [ ] Wait until Railway shows DNS matched for apex.
-6. [ ] Retry certificate issuance if still ISSUING.
-7. [ ] Confirm green lock on `https://olife1.com` (incognito).
-8. [ ] Reply in chat: “SSL green” (or paste new Railway domain-status screenshot).
-9. [ ] (Later) Add `staging.olife1.com` DNS when staging service exists.
+Panel path: [hostinger.com](https://hostinger.com) → **Domains** → **olife1.com** → **DNS / Nameservers** → **DNS Records**.
+
+Leave nameservers as:
+
+- `ns1.dns-parking.com`
+- `ns2.dns-parking.com`
+
+### 3a. DELETE (parking / conflicts)
+
+Delete these if present:
+
+1. **A** record for `@` / `olife1.com` pointing at Hostinger parking (observed earlier: `153.52.255.98`) — or any other apex A/AAAA that is not managed as part of an ALIAS flatten.
+2. Any **AAAA** on `@` that conflicts.
+3. Any **old www CNAME** that does **not** equal `jghbrc1s.up.railway.app` (or the www target currently shown in Railway).
+4. Any second root **ALIAS/CNAME** (Hostinger allows only one apex ALIAS). If Hostinger CDN created an ALIAS, **disable CDN** first, then remove/replace that ALIAS.
+
+Do **not** delete unrelated MX/TXT needed for email unless you know they are obsolete.
+
+### 3b. ADD — apex (Railway CNAME via Hostinger ALIAS)
+
+Railway requires a **CNAME** at the root. Hostinger’s editor: choose type **CNAME**, name `@` — Hostinger stores it as **CNAME ALIAS** (flattening).
+
+| Type | Name | Points to | TTL |
+|------|------|-----------|-----|
+| CNAME (becomes ALIAS) | `@` | `6uu49l2o.up.railway.app` | default |
+
+No trailing dot needed in Hostinger. Target must be a hostname, **not** an IP.
+
+### 3c. ADD / UPDATE — www
+
+| Type | Name | Points to | TTL |
+|------|------|-----------|-----|
+| CNAME | `www` | `jghbrc1s.up.railway.app` | default |
+
+### 3d. TXT (only if Railway UI shows one)
+
+If Domains UI lists an ownership TXT (e.g. `_railway` / verify token), add it exactly. Domains are already **Verified** in API, so you may not need a new TXT.
+
+### 3e. Save and wait
+
+Propagation is often **15–60 minutes** (can be longer). Then confirm in Railway (section 4).
 
 ---
 
-## 6. Verification commands (agent / owner)
+## 4. Confirm in Railway UI (exact places)
 
-```powershell
-nslookup -type=NS olife1.com
-nslookup olife1.com
-nslookup -type=CNAME www.olife1.com
-```
-
-Expect: apex no longer on parking IP; records match Railway UI; browser lock closed; Python `ssl.create_default_context()` verify succeeds for `olife1.com`.
+1. Open project → service **web** → **Settings** → **Networking** / **Public Networking** → **Custom Domains**.
+2. For **`olife1.com`**:
+   - Required DNS row should show **matched** / no longer “unset”.
+   - Certificate status should move **ISSUING → ACTIVE** (or equivalent “Valid” / green) within ~15–60 minutes after DNS matches.
+3. If stuck on ISSUING after DNS matches: use **Retry certificate issuance** on that domain (dashboard control or Railway CLI domain retry).
+4. Browser check: **Incognito** → `https://olife1.com` → closed lock; cert SAN includes `olife1.com`.
+5. Reply in chat: **`SSL green`**.
 
 ---
 
-## 7. Out of scope for this fix doc
+## 5. Apex A-record / dynamic IP — do not use static A
 
-- Moving app data to Supabase (see `docs/SUPABASE_SETUP.md`).
-- GA4 (see `docs/GA4_SETUP.md`).
-- Code changes (require **APPROVE BUILD**).
+Railway’s live docs ([Working with Domains — Adding a root domain](https://docs.railway.com/networking/domains/working-with-domains#adding-a-root-domain)):
+
+- Root domains use **CNAME flattening** or **dynamic ALIAS**, not a fixed A IP you copy once.
+- Railway’s edge IPs change; a hard-coded A record will rot.
+
+**Correct approach:** CNAME/ALIAS to the `*.up.railway.app` target Railway shows (section 1).
+
+---
+
+## 6. Important caveat (live Railway docs — not a guess)
+
+Railway’s docs **explicitly list Hostinger** among providers that **do not** support CNAME flattening / dynamic ALIAS at the root, and recommend switching nameservers to **Cloudflare** (free) when apex CNAME never resolves.
+
+That is **not** “migrate NS to Railway.” It is a contingency if Option A fails.
+
+**Try Option A first** (Hostinger CNAME→ALIAS as above). Then:
+
+| After 60+ min | Action |
+|---------------|--------|
+| Railway shows apex DNS **matched** + cert **ACTIVE** | Done — `SSL green` |
+| Apex still **unset** / public DNS still parking A | Contingency: point domain NS to **Cloudflare**, add the same CNAME `@` → `6uu49l2o.up.railway.app` + www CNAME (Cloudflare flattens apex). Still **not** Railway nameservers. |
+| Need site usable during wait | `www` already has VALID cert; temporary use `https://www.olife1.com` until apex flips (canonical stays apex in app once SSL green). |
+
+Phase 2 proceeds on Railway `*.up.railway.app` / staging hostname regardless.
+
+---
+
+## 7. Owner checklist (copy/paste)
+
+1. [ ] Hostinger → Domains → olife1.com → DNS Records  
+2. [ ] Delete parking apex **A** / conflicting ALIAS / bad www CNAME  
+3. [ ] Add CNAME `@` → `6uu49l2o.up.railway.app`  
+4. [ ] Set CNAME `www` → `jghbrc1s.up.railway.app`  
+5. [ ] Add TXT only if Railway UI shows one  
+6. [ ] Railway → web → Domains → apex **matched** + cert **ACTIVE**  
+7. [ ] Incognito green lock on `https://olife1.com`  
+8. [ ] Reply **`SSL green`**
+
+---
+
+## 8. Out of scope
+
+- Supabase / GA4 setup  
+- App code (www→apex 301 after SSL green, post–APPROVE BUILD)  
+- Moving nameservers to Railway (explicitly out)

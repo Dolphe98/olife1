@@ -21,7 +21,8 @@ You are building and operating **olife1.com** (Olife). Product owner is human; a
 - Hosting: Railway (`web` + `worker`; staging + prod).
 - Multi-agent: LangGraph **library** self-hosted — **not** LangGraph Platform.
 - LLM: Gemini Flash default; Pro opt-in; thin adapter for Anthropic/OpenAI fallback.
-- Monorepo: Django app + `/agents` + `/chatbot`.
+- Monorepo: Django app + `/agents` + `/chatbot` (Telegram + `/admin/commands/` — no Google Chat).
+- Control plane: plain text commands only; one router, two transports.
 
 ## Brand voice
 

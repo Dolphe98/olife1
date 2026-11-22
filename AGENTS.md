@@ -126,7 +126,14 @@ Split Frontend/Backend retained because Olife is template-rendered Django: CSS/m
 
 ---
 
-## 3. Google Chat commands → agents
+## 3. Commands → agents (plain text only)
+
+One **command router**; two transports in Phase 5 (identical grammar):
+
+1. **Telegram bot** (primary) — plain text messages mirroring the `/slash` set.
+2. **`/admin/commands/`** (backup) — staff-only web console POSTs the same strings to the orchestrator.
+
+**Rule:** Agents must **not** depend on Chat-only primitives (cards, buttons, Workspace widgets). Plain text in → plain text / markdown out. No Google Chat.
 
 | Trigger | Primary agent | Notes |
 |---------|---------------|-------|
@@ -148,10 +155,11 @@ Split Frontend/Backend retained because Olife is template-rendered Django: CSS/m
 ## 4. LangGraph diagram (text)
 
 ```text
-                    ┌──────────────┐
-                    │  Chat/Cmd    │
-                    └──────┬───────┘
-                           ▼
+                    ┌─────────────────────────────┐
+                    │ Command ingress             │
+                    │ Telegram | /admin/commands/ │
+                    └──────────────┬──────────────┘
+                                   ▼
                     ┌──────────────┐
               ┌────►│ Orchestrator │◄──── /pause
               │     └──────┬───────┘
@@ -202,17 +210,18 @@ Split Frontend/Backend retained because Olife is template-rendered Django: CSS/m
 
 ---
 
-## 5. Google Chat feasibility (verified against Google docs)
+## 5. Control surface decision (locked)
 
-Google’s Chat developer docs state: **“Google Chat API is only available to Google Workspace users.”** Configuring a Chat app / calling Chat API requires a **Business or Enterprise Workspace** account with Chat access. Personal Gmail can *use* some Chat apps as an end user but **cannot host/configure** the bot.
+**Owner:** consumer Gmail only — **no Google Workspace**. Google Chat API is unavailable for hosting a bot ([Google docs](https://developers.google.com/workspace/chat/troubleshoot-chat-apps): Chat API requires Workspace). **Do not build Google Chat.**
 
-**Phase 5 gate:** Owner must confirm Workspace vs personal Gmail before build.
+**Phase 5 builds both:**
 
-**Fallback (if personal only):**
+| Transport | Role | Notes |
+|-----------|------|-------|
+| Telegram bot | Primary | BotFather token in Railway env; plain text `/commands` |
+| `/admin/commands/` | Backup | Staff-only; same command strings POSTed to orchestrator |
 
-1. **Preferred:** Staff **web command console** at `/admin/commands/` (same command grammar).
-2. **Alternative:** Telegram bot (BotFather token in Railway env) with identical command parser.
-3. Keep `chatbot/` adapters: `GoogleChatAdapter` | `TelegramAdapter` | `WebConsoleAdapter` behind one interface.
+Adapters under `chatbot/`: `TelegramAdapter` + `WebConsoleAdapter` → shared `CommandRouter` → LangGraph. Optional later: WhatsApp Business API as a third transport if Telegram is blocked regionally — **not** in Phase 5 scope unless owner revisits.
 
 ---
 
