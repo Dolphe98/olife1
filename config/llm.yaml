@@ -1,0 +1,29 @@
+# Non-secret LLM routing. Copy to config/llm.yaml (gitignored if it gains secrets — prefer keeping this file secret-free).
+# API keys live in environment variables only.
+
+primary:
+  provider: gemini
+  model: gemini-flash
+  temperature: 0.4
+
+pro:
+  provider: gemini
+  model: gemini-pro
+  temperature: 0.3
+  enabled_env: LLM_ALLOW_PRO
+
+fallbacks:
+  - provider: anthropic
+    model: claude-sonnet
+    temperature: 0.4
+  - provider: openai
+    model: gpt-4.1-mini
+    temperature: 0.4
+
+agents:
+  BrandVoice:
+    temperature: 0.5
+  Architect:
+    temperature: 0.2
+  Deployer:
+    temperature: 0.1

@@ -1,9 +1,11 @@
 from django.conf import settings
+from django.contrib import messages
+from django.core.mail import send_mail
 from django.http import Http404
-from django.shortcuts import render
-from django.views.decorators.http import require_GET
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_GET, require_http_methods
 
-from .models import BlogPost, Fragment
+from .models import BlogPost, ContactMessage, Fragment, Subscriber
 
 
 def _published_posts():
@@ -67,13 +69,46 @@ def about(request):
     return render(request, "sitepages/about.html")
 
 
-@require_GET
+@require_http_methods(["GET", "POST"])
 def contact(request):
+    if request.method == "POST":
+        form_type = request.POST.get("form_type", "contact")
+        if form_type == "newsletter" and settings.FEATURE_NEWSLETTER:
+            email = (request.POST.get("email") or "").strip().lower()
+            if email:
+                Subscriber.objects.get_or_create(
+                    email=email,
+                    defaults={"source": "web", "status": Subscriber.STATUS_ACTIVE},
+                )
+                messages.success(request, "Thanks for subscribing to Olife.")
+            return redirect("contact")
+
+        msg = ContactMessage.objects.create(
+            first_name=(request.POST.get("first_name") or "").strip(),
+            last_name=(request.POST.get("last_name") or "").strip(),
+            email=(request.POST.get("email") or "").strip(),
+            phone=(request.POST.get("phone") or "").strip(),
+            subject=(request.POST.get("subject") or "").strip() or "Contact",
+            body=(request.POST.get("message") or "").strip(),
+        )
+        if settings.CONTACT_NOTIFY_EMAIL:
+            send_mail(
+                subject=f"[Olife] {msg.subject}",
+                message=(
+                    f"From: {msg.first_name} {msg.last_name} <{msg.email}>\n"
+                    f"Phone: {msg.phone}\n\n{msg.body}"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[settings.CONTACT_NOTIFY_EMAIL],
+                fail_silently=True,
+            )
+        messages.success(request, "Message sent. Thank you.")
+        return redirect("contact")
+
     return render(
         request,
         "sitepages/contact.html",
         {
-            "formspree_endpoint": settings.FORMSPREE_ENDPOINT,
             "recaptcha_site_key": settings.RECAPTCHA_SITE_KEY,
         },
     )
