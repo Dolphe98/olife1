@@ -1,0 +1,67 @@
+---
+description: Olife project conventions — stack, voice, deploy, agents, secrets
+alwaysApply: true
+---
+
+# Olife conventions
+
+You are building and operating **olife1.com** (Olife). Product owner is human; agents execute within these rules.
+
+## Phase gate
+
+- Until the owner replies **`APPROVE BUILD`**, do not write or merge product/application code that changes runtime behavior.
+- Phase 1 docs live on branch `phase-1-plan` — do not merge to `main` without owner approval.
+- **`APPROVE DEPLOY`** is required for production. Staging deploy may be autonomous only after APPROVE BUILD.
+
+## Stack (locked)
+
+- Django + Django templates only. **No** Next.js, React, or separate SPA.
+- Supabase Postgres via `DATABASE_URL`. No Railway Postgres for app data unless owner approves a documented blocker.
+- Media: Supabase Storage.
+- Hosting: Railway (`web` + `worker`; staging + prod).
+- Multi-agent: LangGraph **library** self-hosted — **not** LangGraph Platform.
+- LLM: Gemini Flash default; Pro opt-in; thin adapter for Anthropic/OpenAI fallback.
+- Monorepo: Django app + `/agents` + `/chatbot`.
+
+## Brand voice
+
+- Read and obey `docs/BRAND.md`.
+- Raw, reflective, grounded, honest, conversational — one person late at night.
+- Never: guru, hustle-bro, corporate marketer, preachy textbook.
+
+## Naming
+
+- Agents: Orchestrator, Architect, Designer, FrontendBuilder, BackendBuilder, ContentMigrator, SEOSpecialist, CRMBuilder, Deployer, QAInspector, BrandVoice, SiteAuditor.
+- Custom CRM at `/admin` (staff). Django admin at `/django-admin/`.
+- Canonical host: `https://olife1.com`. www → apex 301.
+- Fragments stay a first-class section named Fragments.
+
+## Git / deploy
+
+- `main` = production (auto-deploy). `staging` = staging.
+- Feature branches → PR → `staging` → smoke → `main`.
+- Every deploy, rollback, schema change, or destructive action: append `logs/audit/YYYY-MM-DD.md`.
+- Every service exposes `GET /healthz`. Prefer Railway auto-rollback on failed healthcheck.
+- Commit only `.env.example`. Never commit real keys, service accounts, or project IDs in docs — use placeholders like `<SUPABASE_PROJECT_REF>`.
+
+## Product defaults
+
+- Comments: registered-only; moderation queue in admin (flagged first).
+- Newsletter: DB-only v1; `Subscriber.sync_*` fields for future providers.
+- Google login: allauth plumbing OK; feature flag **OFF** at launch.
+- Store: stub linking to `STORE_URL`. Podcast/Video: embeds only.
+- English only for v1.
+- Design: dark theme per `docs/DESIGN.md`; subtle motion only.
+
+## Docs map
+
+- Architecture: `ARCHITECTURE.md`
+- Agents: `AGENTS.md`
+- Roadmap: `ROADMAP.md`
+- SSL: `SSL_FIX.md`
+- Data model: `DATA_MODEL.md`
+- Design: `DESIGN.md`
+- Migration URL map: `MIGRATION_REPORT.md`
+- Brand: `docs/BRAND.md`
+- Supabase setup: `docs/SUPABASE_SETUP.md`
+- GA4 setup: `docs/GA4_SETUP.md`
