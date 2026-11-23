@@ -127,6 +127,17 @@ def _git_meta(root: Path) -> dict[str, str]:
         )
     except Exception:
         pass
+    # Railway images often omit .git — use platform metadata.
+    if meta["branch"] in ("unknown", "HEAD", ""):
+        meta["branch"] = (
+            os.environ.get("RAILWAY_GIT_BRANCH", "").strip()
+            or os.environ.get("RAILWAY_ENVIRONMENT_NAME", "").strip()
+            or meta["branch"]
+        )
+    if meta["sha"] in ("unknown", ""):
+        meta["sha"] = (
+            os.environ.get("RAILWAY_GIT_COMMIT_SHA", "").strip() or meta["sha"]
+        )
     return meta
 
 
