@@ -447,8 +447,37 @@ def validate(state: BackendBuilderState) -> BackendBuilderState:
     return {"validation": result}
 
 
+def _clone_staging(work: Path, token: str) -> None:
+    """Shallow-clone staging into work. Works on Railway (no local .git)."""
+    # Token only in process argv/env for clone URL — never written to disk configs.
+    remote = (
+        f"https://x-access-token:{quote(token, safe='')}"
+        f"@github.com/{GITHUB_OWNER}/{GITHUB_REPO}.git"
+    )
+    proc = subprocess.run(
+        [
+            "git",
+            "clone",
+            "--depth",
+            "1",
+            "--branch",
+            BASE_BRANCH,
+            "--single-branch",
+            remote,
+            str(work),
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+        check=False,
+    )
+    if proc.returncode != 0:
+        err = ((proc.stderr or proc.stdout or "").strip()).replace(token, "***")
+        raise RuntimeError(f"git clone staging failed: {err[:2000]}")
+
+
 def apply(state: BackendBuilderState) -> BackendBuilderState:
-    """Node 3: write files on branch agent/backend/<job_uuid> (worktree)."""
+    """Node 3: clone staging, branch agent/backend/<job_uuid>, write files."""
     validation = state.get("validation") or {}
     if not validation.get("ok"):
         return {}
@@ -457,18 +486,15 @@ def apply(state: BackendBuilderState) -> BackendBuilderState:
     if not job_id:
         raise RuntimeError("job_id required for branch name")
     branch = f"agent/backend/{job_id}"
-    root = _repo_root()
     plan_data = state.get("plan") or {}
     files = plan_data.get("files") or []
+    token = _github_token()
 
-    work = Path(tempfile.mkdtemp(prefix="bb-worktree-"))
+    parent = Path(tempfile.mkdtemp(prefix="bb-clone-"))
+    work = parent / "repo"
     try:
-        _run_git(["fetch", "origin", BASE_BRANCH], cwd=root)
-        # Detached worktree from origin/staging
-        _run_git(
-            ["worktree", "add", "-B", branch, str(work), f"origin/{BASE_BRANCH}"],
-            cwd=root,
-        )
+        _clone_staging(work, token)
+        _run_git(["checkout", "-B", branch], cwd=work)
         written: list[str] = []
         for item in files:
             rel = _normalize_path(str(item["path"]))
@@ -485,11 +511,7 @@ def apply(state: BackendBuilderState) -> BackendBuilderState:
             "files_changed": written,
         }
     except Exception:
-        # Cleanup partial worktree
-        try:
-            _run_git(["worktree", "remove", "--force", str(work)], cwd=root, check=False)
-        except Exception:
-            shutil.rmtree(work, ignore_errors=True)
+        shutil.rmtree(parent, ignore_errors=True)
         raise
 
 
@@ -557,7 +579,6 @@ def publish(state: BackendBuilderState) -> BackendBuilderState:
     token = _github_token()  # presence of NAME; value never logged
     work = Path(state["work_dir"])
     branch = state["branch"]
-    root = _repo_root()
     plan_data = state.get("plan") or {}
     summary = (plan_data.get("summary") or "backend change").strip()
     short = summary[:72].rstrip(".")
@@ -601,9 +622,11 @@ def publish(state: BackendBuilderState) -> BackendBuilderState:
     )
     if push.returncode != 0:
         err = (push.stderr or push.stdout or "").strip()
-        # Redact token if it somehow appears
         err = err.replace(token, "***")
-        raise RuntimeError(f"git push failed: {err[:2000]}")
+        raise RuntimeError(
+            "git push failed (GITHUB_TOKEN needs Contents: Read and write "
+            f"on Dolphe98/olife1): {err[:1500]}"
+        )
 
     diff_summary = {
         "files": files,
@@ -639,7 +662,8 @@ def publish(state: BackendBuilderState) -> BackendBuilderState:
         )
         if pr_resp.status_code not in (200, 201):
             raise RuntimeError(
-                f"Open PR failed: {pr_resp.status_code} {pr_resp.text[:500]}"
+                "Open PR failed (GITHUB_TOKEN needs Pull requests: Read and write "
+                f"on Dolphe98/olife1): {pr_resp.status_code} {pr_resp.text[:500]}"
             )
         pr = pr_resp.json()
         pr_url = pr.get("html_url") or ""
@@ -656,9 +680,10 @@ def publish(state: BackendBuilderState) -> BackendBuilderState:
                     f"Label PR failed: {lab.status_code} {lab.text[:300]}"
                 )
 
-    # Cleanup worktree (do not delete remote branch)
+    # Cleanup clone dir (do not delete remote branch)
     try:
-        _run_git(["worktree", "remove", "--force", str(work)], cwd=root, check=False)
+        parent = work.parent if work.name == "repo" else work
+        shutil.rmtree(parent, ignore_errors=True)
     except Exception:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -723,17 +748,11 @@ def finalize(state: BackendBuilderState) -> BackendBuilderState:
     )
     result = dumps_backend_builder_result(payload)
 
-    # Cleanup leftover worktree on failure paths
+    # Cleanup leftover clone on failure paths
     work = state.get("work_dir") or ""
     if work and Path(work).is_dir():
-        try:
-            _run_git(
-                ["worktree", "remove", "--force", work],
-                cwd=_repo_root(),
-                check=False,
-            )
-        except Exception:
-            shutil.rmtree(work, ignore_errors=True)
+        parent = Path(work).parent if Path(work).name == "repo" else Path(work)
+        shutil.rmtree(parent, ignore_errors=True)
 
     out: BackendBuilderState = {"result": result}
     if not ok:
