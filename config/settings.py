@@ -73,7 +73,13 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     "sitepages",
     "crm",
+    "agents",
 ]
+
+# Agent runtime (Phase 3A)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+DIRECT_URL = os.environ.get("DIRECT_URL", "").strip()
 
 # allauth plumbing — inactive until FEATURE_GOOGLE_LOGIN=true
 if FEATURE_GOOGLE_LOGIN:
