@@ -64,3 +64,25 @@ class SiteAudit(models.Model):
 
     def __str__(self):
         return f"SiteAudit {self.url} @ {self.run_at}"
+
+
+class ArchitectReport(models.Model):
+    """Drift report history written by Architect (Phase 3C)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    branch = models.CharField(max_length=128)
+    commit_sha = models.CharField(max_length=64)
+    run_at = models.DateTimeField()
+    job = models.ForeignKey(
+        AgentJob,
+        on_delete=models.CASCADE,
+        related_name="architect_reports",
+    )
+    summary_json = models.JSONField(default=dict)
+    markdown = models.TextField()
+
+    class Meta:
+        ordering = ["-run_at"]
+
+    def __str__(self):
+        return f"ArchitectReport {self.branch}@{self.commit_sha[:7]} {self.run_at}"

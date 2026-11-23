@@ -15,7 +15,7 @@ from agents.models import AgentJob
 
 
 class Command(BaseCommand):
-    help = "Poll AgentJob queue and execute jobs (echo, site_auditor)."
+    help = "Poll AgentJob queue and execute jobs (echo, site_auditor, architect)."
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -92,6 +92,14 @@ class Command(BaseCommand):
                 from agents.graphs.site_auditor import run_site_auditor
 
                 result = run_site_auditor(
+                    job.command,
+                    thread_id=str(job.id),
+                    job_id=str(job.id),
+                )
+            elif job.agent_name == "architect":
+                from agents.graphs.architect import run_architect
+
+                result = run_architect(
                     job.command,
                     thread_id=str(job.id),
                     job_id=str(job.id),
