@@ -15,7 +15,10 @@ from agents.models import AgentJob
 
 
 class Command(BaseCommand):
-    help = "Poll AgentJob queue and execute jobs (echo, site_auditor, architect)."
+    help = (
+        "Poll AgentJob queue and execute jobs "
+        "(echo, site_auditor, architect, backend_builder)."
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -104,6 +107,14 @@ class Command(BaseCommand):
                     thread_id=str(job.id),
                     job_id=str(job.id),
                 )
+            elif job.agent_name == "backend_builder":
+                from agents.graphs.backend_builder import run_backend_builder
+
+                result = run_backend_builder(
+                    job.command,
+                    thread_id=str(job.id),
+                    job_id=str(job.id),
+                )
             else:
                 raise NotImplementedError("agent not implemented yet")
 
@@ -133,13 +144,26 @@ class Command(BaseCommand):
             err = str(exc) or traceback.format_exc(limit=5)
             if isinstance(exc, NotImplementedError):
                 err = "agent not implemented yet"
+            # BackendBuilder raises JSON result on failure — store in result too
+            result_json = None
+            if job.agent_name == "backend_builder" and err.strip().startswith("{"):
+                result_json = err[:8000]
+                try:
+                    import json as _json
+
+                    parsed = _json.loads(err)
+                    err = str(parsed.get("reason") or err)[:8000]
+                except Exception:
+                    pass
             job.status = AgentJob.Status.FAILED
             job.error = err[:8000]
             job.finished_at = finished
             job.duration_ms = duration_ms
-            job.save(
-                update_fields=["status", "error", "finished_at", "duration_ms"]
-            )
+            update_fields = ["status", "error", "finished_at", "duration_ms"]
+            if result_json is not None:
+                job.result = result_json
+                update_fields.append("result")
+            job.save(update_fields=update_fields)
             self.stdout.write(
                 f"job {job.id} FAILED duration_ms={duration_ms} error={err[:200]}"
             )
