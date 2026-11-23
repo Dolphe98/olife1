@@ -1,1 +1,1 @@
-"""LangGraph graphs. Phase 3A: Echo only."""
+"""LangGraph graphs. Phase 3B: Echo + SiteAuditor."""

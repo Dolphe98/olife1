@@ -15,7 +15,7 @@ from agents.models import AgentJob
 
 
 class Command(BaseCommand):
-    help = "Poll AgentJob queue and execute jobs (Echo only in Phase 3A)."
+    help = "Poll AgentJob queue and execute jobs (echo, site_auditor)."
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -84,12 +84,21 @@ class Command(BaseCommand):
         self.stdout.flush()
 
         try:
-            if job.agent_name != "echo":
+            if job.agent_name == "echo":
+                from agents.graphs.echo import run_echo
+
+                result = run_echo(job.command, thread_id=str(job.id))
+            elif job.agent_name == "site_auditor":
+                from agents.graphs.site_auditor import run_site_auditor
+
+                result = run_site_auditor(
+                    job.command,
+                    thread_id=str(job.id),
+                    job_id=str(job.id),
+                )
+            else:
                 raise NotImplementedError("agent not implemented yet")
 
-            from agents.graphs.echo import run_echo
-
-            result = run_echo(job.command, thread_id=str(job.id))
             finished = datetime.now(timezone.utc)
             duration_ms = int((time.perf_counter() - started) * 1000)
             job.status = AgentJob.Status.SUCCEEDED

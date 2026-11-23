@@ -42,3 +42,25 @@ class AgentJob(models.Model):
 
     def __str__(self):
         return f"{self.agent_name} {self.status} ({self.id})"
+
+
+class SiteAudit(models.Model):
+    """Per-URL history row written by SiteAuditor (Phase 3B)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    url = models.URLField(max_length=500)
+    status_per_check = models.JSONField(default=dict)
+    response_times_ms = models.JSONField(default=dict)
+    cert_days_remaining = models.IntegerField(null=True, blank=True)
+    run_at = models.DateTimeField()
+    job = models.ForeignKey(
+        AgentJob,
+        on_delete=models.CASCADE,
+        related_name="site_audits",
+    )
+
+    class Meta:
+        ordering = ["-run_at"]
+
+    def __str__(self):
+        return f"SiteAudit {self.url} @ {self.run_at}"
