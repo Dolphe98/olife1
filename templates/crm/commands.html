@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} — Olife{% endblock %}
+
+{% block content %}
+<div class="container stack-md crm-shell">
+  <h1>Commands</h1>
+  <p class="lead">Backup control surface. Same plain-text grammar as Telegram (Phase 5).</p>
+  <form method="post" class="form-grid">
+    {% csrf_token %}
+    <div class="field full">
+      <label for="command">Command</label>
+      <input id="command" name="command" type="text" placeholder="/status" required>
+    </div>
+    <button type="submit" class="btn-submit">Run</button>
+  </form>
+  {% if result %}
+  <pre class="crm-result">{{ result }}</pre>
+  {% endif %}
+  <p><a href="{% url 'crm:dashboard' %}">← CRM</a></p>
+</div>
+{% endblock %}

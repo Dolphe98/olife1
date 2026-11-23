@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} — Olife{% endblock %}
+
+{% block content %}
+<div class="container stack-md crm-shell">
+  <h1>CRM</h1>
+  <p class="lead">Read-only traffic and pipeline dashboard (Phase 4). Staff only.</p>
+  <ul class="crm-kpi-list">
+    <li>GA4 KPIs: <span class="text-muted">not wired yet</span></li>
+    <li>Content pipeline: <span>{{ pipeline_status }}</span></li>
+    <li>Deploy health: <span class="text-muted">see /healthz + Railway</span></li>
+  </ul>
+  <p><a class="btn-join" href="{% url 'crm:commands' %}">Command console</a></p>
+  <p><a href="/django-admin/">Django admin escape hatch</a></p>
+</div>
+{% endblock %}
