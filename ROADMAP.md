@@ -106,6 +106,8 @@ No production code until owner replies **`APPROVE BUILD`**.
 - SEO suite live; Podcast/Store stubs; design polish per `DESIGN.md`
 - Remove Formspree; enable flags intentionally
 - **Set Supabase env vars on Railway production environment before APPROVE DEPLOY** (currently prod runs with SQLite-era config / missing prod Supabase parity). Staging already has `DATABASE_URL` + Supabase keys — production must match before promote.
+- **APPROVE DEPLOY gate — RLS:** re-apply RLS on all `sitepages_*` content and intake tables (deferred from Phase 3; not a Phase 3 blocker).
+- **Media:** migrate static/images → Supabase Storage only in Phase 6; Phase 3 agents must not touch image sources or Storage URLs (WhiteNoise + `static/images/` remain).
 - Prod promote with APPROVE DEPLOY; post-launch `/report`
 
 **Acceptance**
@@ -114,6 +116,7 @@ No production code until owner replies **`APPROVE BUILD`**.
 - [ ] www→apex 301; SSL valid
 - [ ] Content counts match report; images on Supabase
 - [ ] Railway **production** env has Supabase `DATABASE_URL` (+ storage keys) parity with staging
+- [ ] RLS re-applied on all `sitepages_*` content and intake tables
 - [ ] Launch checklist signed in audit log
 
 ---

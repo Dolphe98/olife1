@@ -1,3 +1,9 @@
-# Agents (Phase 3)
+# Agents (Phase 3A)
 
-LangGraph topology is specified in `/AGENTS.md`. This package is a scaffold placeholder for Phase 2.
+Minimal LangGraph runtime: `AgentJob` queue + `agent_worker` + Echo graph (Gemini proof-of-life).
+
+- Submit: `python manage.py agent_submit echo "<command>"`
+- Worker: `python manage.py agent_worker`
+
+Hard rules for Phase 3: no media/Storage changes; no RLS; Echo only (no real agents yet).
+Topology for later phases: `/AGENTS.md`.
