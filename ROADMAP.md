@@ -105,6 +105,7 @@ No production code until owner replies **`APPROVE BUILD`**.
 - Execute `MIGRATION_REPORT.md` (slugs, Media→Storage, 301s)
 - SEO suite live; Podcast/Store stubs; design polish per `DESIGN.md`
 - Remove Formspree; enable flags intentionally
+- **Set Supabase env vars on Railway production environment before APPROVE DEPLOY** (currently prod runs with SQLite-era config / missing prod Supabase parity). Staging already has `DATABASE_URL` + Supabase keys — production must match before promote.
 - Prod promote with APPROVE DEPLOY; post-launch `/report`
 
 **Acceptance**
@@ -112,6 +113,7 @@ No production code until owner replies **`APPROVE BUILD`**.
 - [ ] All old `/blog/<id>/` URLs 301 to slugs
 - [ ] www→apex 301; SSL valid
 - [ ] Content counts match report; images on Supabase
+- [ ] Railway **production** env has Supabase `DATABASE_URL` (+ storage keys) parity with staging
 - [ ] Launch checklist signed in audit log
 
 ---
