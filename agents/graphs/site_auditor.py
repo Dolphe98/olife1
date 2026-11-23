@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 import ssl
 import time
 from datetime import datetime, timezone
 from typing import Any, TypedDict
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import certifi
 import httpx
@@ -26,6 +27,11 @@ CERT_TIMEOUT = 5.0
 SLOW_MS = 2000
 CERT_WARN_DAYS = 30
 DARK_TOKEN = "--bg-void"
+DARK_TOKEN_PREFIX = "--bg-"
+STYLESHEET_HREF_RE = re.compile(
+    r'<link[^>]+rel=["\']stylesheet["\'][^>]+href=["\']([^"\']+)["\']',
+    re.IGNORECASE,
+)
 
 
 def _ensure_ssl_certs() -> None:
@@ -125,28 +131,94 @@ def _check_healthz(client: httpx.Client, base: str) -> dict[str, Any]:
 
 
 def _check_home(client: httpx.Client, base: str) -> dict[str, Any]:
+    """Dark-theme token lives in linked CSS, not inline HTML."""
     code, body, ms, err = _timed_get(client, f"{base}/")
-    detail = err or ""
-    ok = False
-    if err:
-        detail = f"request error: {err}"
-    elif code != 200:
-        detail = f"expected 200, got {code}"
-    elif DARK_TOKEN not in body:
-        detail = f"200 but missing dark-theme token {DARK_TOKEN}"
-    else:
-        ok = True
-        detail = f"200 + contains {DARK_TOKEN}"
     anomalies: list[str] = []
-    if not ok:
-        anomalies.append(f"home FAIL: {detail}")
     if ms > SLOW_MS:
         anomalies.append(f"home slow: {ms}ms")
+
+    if err:
+        detail = f"request error: {err}"
+        anomalies.append(f"home FAIL: {detail}")
+        return {
+            "name": "home",
+            "pass": False,
+            "result": "FAIL",
+            "status_code": code,
+            "ms": ms,
+            "detail": detail,
+            "anomalies": anomalies,
+        }
+    if code != 200:
+        detail = f"expected 200, got {code}"
+        anomalies.append(f"home FAIL: {detail}")
+        return {
+            "name": "home",
+            "pass": False,
+            "result": "FAIL",
+            "status_code": code,
+            "ms": ms,
+            "detail": detail,
+            "anomalies": anomalies,
+        }
+
+    match = STYLESHEET_HREF_RE.search(body or "")
+    if not match:
+        detail = "no stylesheet linked"
+        anomalies.append(f"home FAIL: {detail}")
+        return {
+            "name": "home",
+            "pass": False,
+            "result": "FAIL",
+            "status_code": code,
+            "ms": ms,
+            "detail": detail,
+            "anomalies": anomalies,
+        }
+
+    css_url = urljoin(f"{base}/", match.group(1))
+    css_code, css_body, css_ms, css_err = _timed_get(client, css_url)
+    ms_total = ms + css_ms
+    if css_ms > SLOW_MS:
+        anomalies.append(f"home css slow: {css_ms}ms")
+
+    if css_err or css_code is None or css_code >= 400:
+        detail = (
+            f"200 HTML; CSS WARN (fetch failed: "
+            f"{css_err or f'status {css_code}'} @ {css_url})"
+        )
+        anomalies.append(f"home WARN: {detail}")
+        return {
+            "name": "home",
+            "pass": True,
+            "result": "WARN",
+            "status_code": code,
+            "ms": ms_total,
+            "detail": detail,
+            "anomalies": anomalies,
+        }
+
+    has_token = DARK_TOKEN in css_body or DARK_TOKEN_PREFIX in css_body
+    if has_token:
+        detail = f"200 + CSS contains dark token ({DARK_TOKEN} / {DARK_TOKEN_PREFIX})"
+        return {
+            "name": "home",
+            "pass": True,
+            "result": "PASS",
+            "status_code": code,
+            "ms": ms_total,
+            "detail": detail,
+            "anomalies": anomalies,
+        }
+
+    detail = f"200 but CSS missing dark-theme token ({css_url})"
+    anomalies.append(f"home FAIL: {detail}")
     return {
         "name": "home",
-        "pass": ok,
+        "pass": False,
+        "result": "FAIL",
         "status_code": code,
-        "ms": ms,
+        "ms": ms_total,
         "detail": detail,
         "anomalies": anomalies,
     }
@@ -222,7 +294,10 @@ def _audit_one(base: str) -> dict[str, Any]:
     for c in checks:
         anomalies.extend(c.get("anomalies") or [])
 
-    status_per_check = {c["name"]: ("PASS" if c["pass"] else "FAIL") for c in checks}
+    status_per_check = {
+        c["name"]: (c.get("result") or ("PASS" if c.get("pass") else "FAIL"))
+        for c in checks
+    }
     response_times_ms = {c["name"]: c["ms"] for c in checks}
 
     return {
@@ -283,7 +358,7 @@ def _deterministic_markdown(gathered: dict[str, Any]) -> str:
     for entry in gathered.get("urls") or []:
         url = entry.get("url", "")
         for c in entry.get("checks") or []:
-            result = "PASS" if c.get("pass") else "FAIL"
+            result = c.get("result") or ("PASS" if c.get("pass") else "FAIL")
             lines.append(
                 f"| {url} | {c.get('name')} | {result} | "
                 f"{c.get('status_code')} | {c.get('ms')} | "
