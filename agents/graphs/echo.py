@@ -94,21 +94,43 @@ def build_graph(checkpointer: PostgresSaver):
     return builder.compile(checkpointer=checkpointer)
 
 
-def run_echo(command: str, thread_id: str) -> str:
+def _checkpoint_conn_string() -> str:
     """
-    Invoke Echo with Postgres checkpointing.
-    Uses DIRECT_URL (session mode) — not the transaction pooler.
+    Session-mode Postgres URL for langgraph-checkpoint-postgres.
+    Prefer LANGGRAPH_DATABASE_URL, then DATABASE_URL (session pooler :5432),
+    then DIRECT_URL. Skip transaction pooler (:6543) — it breaks checkpoints.
+    Railway often cannot reach Supabase direct IPv6 hosts.
     """
-    direct_url = getattr(settings, "DIRECT_URL", "") or os.environ.get(
-        "DIRECT_URL", ""
-    ).strip()
-    if not direct_url:
-        raise RuntimeError(
-            "DIRECT_URL is required for langgraph-checkpoint-postgres "
-            "(session/direct connection, not transaction pooler)"
-        )
+    candidates = [
+        os.environ.get("LANGGRAPH_DATABASE_URL", "").strip(),
+        getattr(settings, "DIRECT_URL", "") or os.environ.get("DIRECT_URL", "").strip(),
+        os.environ.get("DATABASE_URL", "").strip(),
+    ]
+    # Prefer non-6543 URLs; among those, prefer pooler / LANGGRAPH over raw IPv6 direct last.
+    ordered = []
+    for url in candidates:
+        if not url:
+            continue
+        if ":6543" in url:
+            continue
+        ordered.append(url)
+    # Prefer session pooler (pooler.supabase.com) over db.*.supabase.co when both present
+    for url in ordered:
+        if "pooler.supabase.com" in url:
+            return url
+    if ordered:
+        return ordered[0]
+    raise RuntimeError(
+        "Need LANGGRAPH_DATABASE_URL, DATABASE_URL (session :5432), or DIRECT_URL "
+        "for langgraph-checkpoint-postgres (not transaction pooler :6543)"
+    )
 
-    with PostgresSaver.from_conn_string(direct_url) as checkpointer:
+
+def run_echo(command: str, thread_id: str) -> str:
+    """Invoke Echo with Postgres checkpointing (session-mode connection)."""
+    conn = _checkpoint_conn_string()
+
+    with PostgresSaver.from_conn_string(conn) as checkpointer:
         checkpointer.setup()
         graph = build_graph(checkpointer)
         out = graph.invoke(
