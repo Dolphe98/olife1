@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand
 
-from sitepages.models import BlogPost, Fragment
+from sitepages.models import Fragment, Post
 
 FRAGMENTS = [
     {
@@ -166,7 +166,7 @@ class Command(BaseCommand):
                 },
             )
         for item in POSTS:
-            BlogPost.objects.update_or_create(
+            Post.objects.update_or_create(
                 pk=item["id"],
                 defaults={
                     "title": item["title"],

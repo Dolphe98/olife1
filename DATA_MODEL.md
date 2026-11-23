@@ -65,7 +65,7 @@ DeployEvent / ContentPipelineItem (CRM read models; may be DB or derived)
 | source | CharField | `upload` / `migrated-static` |
 | created_at | DateTime | |
 
-### `Post` (evolves today’s `BlogPost`)
+### `Post` (canonical; formerly Django class `BlogPost` / table `sitepages_blogpost`)
 
 | Field | Type | Notes |
 |-------|------|-------|

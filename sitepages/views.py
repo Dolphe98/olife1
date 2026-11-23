@@ -5,11 +5,11 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
-from .models import BlogPost, ContactMessage, Fragment, Subscriber
+from .models import ContactMessage, Fragment, Post, Subscriber
 
 
 def _published_posts():
-    return BlogPost.objects.filter(is_published=True)
+    return Post.objects.filter(is_published=True)
 
 
 def _published_fragments():
@@ -50,7 +50,7 @@ def blog(request):
 def blog_post(request, pk):
     try:
         post = _published_posts().get(pk=pk)
-    except BlogPost.DoesNotExist as exc:
+    except Post.DoesNotExist as exc:
         raise Http404("Article not found.") from exc
     return render(
         request,
